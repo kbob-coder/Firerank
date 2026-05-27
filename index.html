@@ -1093,8 +1093,20 @@
             document.getElementById('diceDisplay').classList.remove('rolling');
         }, 500);
         
-        addLog(`Rolled ${total}`);
-        renderTurnControls(localState);
+        async function addLog(message) {
+    if (!localState) return;
+
+    const log = localState.log || [];
+
+    log.push({
+        message,
+        highlight: false
+    });
+
+    await update(roomRef, {
+        log: log
+    });
+}
     };
 
     window.drawCard = async function () {
@@ -1191,12 +1203,20 @@
         alert('Visit Firebase Console and copy your web app config');
     };
 
-    function addLog(message) {
-        if (!localState) return;
-        const log = localState.log || [];
-        log.push({ message, highlight: false });
-        localState.log = log;
-        renderLog(localState);
+    async function addLog(message) {
+    if (!localState) return;
+
+    const log = localState.log || [];
+
+    log.push({
+        message,
+        highlight: false
+    });
+
+    await update(roomRef, {
+        log: log
+    });
+}
     }
 </script>
 
