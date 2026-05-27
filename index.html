@@ -1080,34 +1080,47 @@
         });
     }
 
-    window.rollDice = async function () {
-        if (!localState || turnPhase !== 'idle') return;
-        turnPhase = 'rolled';
-        const dice1 = Math.floor(Math.random() * 6) + 1;
-        const dice2 = Math.floor(Math.random() * 6) + 1;
-        const total = dice1 + dice2;
-        
-        document.getElementById('diceDisplay').textContent = DICE_FACES[dice1-1] + ' ' + DICE_FACES[dice2-1];
-        document.getElementById('diceDisplay').classList.add('rolling');
-        setTimeout(() => {
-            document.getElementById('diceDisplay').classList.remove('rolling');
-        }, 500);
-        
-        async function addLog(message) {
-    if (!localState) return;
+    window.rollDice = async function(){
 
-    const log = localState.log || [];
+    if(!localState) return;
 
-    log.push({
-        message,
-        highlight: false
-    });
+    const dice1 = Math.floor(Math.random() * 6) + 1;
+    const dice2 = Math.floor(Math.random() * 6) + 1;
 
-    await update(roomRef, {
-        log: log
-    });
+    const total = dice1 + dice2;
+
+    const player = localState.players[myId];
+
+    let newMoney = player.money;
+
+    // MONEY REWARD
+    newMoney += total * 1000;
+
+    // BONUS FOR DOUBLES
+    if(dice1 === dice2){
+        newMoney += 5000;
+    }
+
+    // SAVE ONLY MONEY
+    await update(
+        ref(db, `rooms/${roomCode}/players/${myId}`),
+        {
+            money:newMoney
+        }
+    );
+
+    // SHOW RESULT
+    let message = `🎲 ${dice1} + ${dice2} = ${total}
+You earned $${total * 1000}`;
+
+    if(dice1 === dice2){
+        message += `\n🔥 DOUBLE BONUS +$5000`;
+    }
+
+    message += `\n\nNew Balance: ${fmt(newMoney)}`;
+
+    alert(message);
 }
-    };
 
     window.drawCard = async function () {
     if (!localState || turnPhase !== 'rolled') return;
