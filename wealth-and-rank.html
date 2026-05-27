@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wealth & Rank — Multiplayer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #E8C96A;
+    --gold-dim: #7a6330;
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --surface3: #22222f;
+    --text: #e8e0d0;
+    --text-dim: #8a8070;
+    --green: #4CAF50;
+    --red: #e05555;
+    --blue: #5588ee;
+    --purple: #9966cc;
+    --border: rgba(201,168,76,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.08) 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(201,168,76,0.03) 50px),
+      repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(201,168,76,0.03) 50px);
+  }
+
+  h1, h2, h3 {
+    font-family: 'Playfair Display', serif;
+  }
+
+  /* ── LOBBY ───────────────────────────────────── */
+  #lobby {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+    gap: 2rem;
+  }
+
+  .logo {
+    text-align: center;
+  }
+
+  .logo h1 {
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold), #8B6914);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .logo p {
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+  }
+
+  .lobby-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .lobby-card h2 {
+    font-size: 1.3rem;
+    color: var(--gold);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.75rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 0.4rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--gold-dim);
+  }
+
+  input[type="text"]::placeholder { color: var(--text-dim); }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 0.85rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold), #8B6914);
+    color: #0a0a0f;
+    font-weight: 500;
+  }
+
+  .btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover { background: var(--surface3); }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── WAITING ROOM ────────────────────────────── */
+  #waiting {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+    gap: 1.5rem;
+  }
+
+  .room-code-box {
+    background: var(--surface);
+    border: 1px solid var(--gold-dim);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    text-align: center;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .room-code-box label { margin-bottom: 0.5rem; }
+
+  .room-code {
+    font-family: 'DM Mono', monospace;
+    font-size: 2.5rem;
+    font-weight: 500;
+    color: var(--gold-light);
+    letter-spacing: 8px;
+  }
+
+  .player-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .player-list h3 {
+    font-size: 0.85rem;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+  }
+
+  .player-list ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .player-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--surface2);
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+  }
+
+  .pip {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  .host-badge {
+    margin-left: auto;
+    font-size: 0.65rem;
+    background: rgba(201,168,76,0.15);
+    color: var(--gold);
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+
+  /* ── GAME ────────────────────────────────────── */
+  #game {
+    display: none;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 1rem;
+    gap: 1rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .game-header h1 {
+    font-size: 1.2rem;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .room-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  /* Rank track */
+  .rank-track {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    overflow-x: auto;
+  }
+
+  .rank-track-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+  }
+
+  .ranks-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-width: 600px;
+  }
+
+  .rank-step {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+
+  .rank-step:not(:last-child)::after {
+    content: '›';
+    position: absolute;
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    z-index: 1;
+  }
+
+  .rank-node {
+    padding: 0.4rem 0.2rem;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all 0.3s;
+    margin: 0 3px;
+  }
+
+  .rank-node.active {
+    border-color: var(--gold-dim);
+    background: rgba(201,168,76,0.08);
+  }
+
+  .rank-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 0.3rem;
+  }
+
+  .rank-emoji { font-size: 1.1rem; }
+  .rank-price { font-size: 0.55rem; color: var(--gold-dim); font-family: 'DM Mono', monospace; }
+
+  .rank-players {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+    min-height: 16px;
+    margin-top: 0.25rem;
+  }
+
+  .rank-player-dot {
+    font-size: 0.6rem;
+    background: var(--surface2);
+    border-radius: 3px;
+    padding: 1px 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* Players grid */
+  .players-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .player-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    transition: border-color 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .player-card.active-turn {
+    border-color: var(--gold);
+    box-shadow: 0 0 20px rgba(201,168,76,0.15);
+  }
+
+  .player-card.jailed::after {
+    content: '🔒 IN JAIL';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    background: rgba(224,85,85,0.2);
+    border-bottom: 1px solid rgba(224,85,85,0.4);
+    font-size: 0.65rem;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 2px;
+    color: var(--red);
+    text-align: center;
+    padding: 3px;
+  }
+
+  .player-card.me {
+    background: var(--surface2);
+  }
+
+  .pc-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .you-tag {
+    font-size: 0.6rem;
+    background: rgba(201,168,76,0.15);
+    color: var(--gold);
+    padding: 2px 6px;
+    border-radius: 20px;
+  }
+
+  .pc-money {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gold-light);
+  }
+
+  .pc-rank {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 0.2rem;
+  }
+
+  /* Actions */
+  .action-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .turn-indicator {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  .turn-indicator span { color: var(--gold); }
+
+  .dice-display {
+    text-align: center;
+    font-size: 3rem;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .dice-display.rolling {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  @keyframes shake {
+    0%,100%{transform:rotate(0)} 20%{transform:rotate(-8deg)} 40%{transform:rotate(8deg)} 60%{transform:rotate(-5deg)} 80%{transform:rotate(5deg)}
+  }
+
+  .action-btns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .action-btns .btn { width: 100%; }
+
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold), #8B6914);
+    color: #0a0a0f;
+    font-weight: 500;
+    border: none;
+    padding: 0.75rem;
+  }
+
+  .btn-gold:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+  .btn-gold:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 0.75rem;
+  }
+
+  .btn-outline:hover:not(:disabled) { border-color: var(--gold-dim); color: var(--text); }
+  .btn-outline:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* Card reveal */
+  .card-reveal {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    text-align: center;
+    border: 1px solid var(--border);
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+
+  .card-reveal.good { border-color: rgba(76,175,80,0.4); color: var(--green); background: rgba(76,175,80,0.08); }
+  .card-reveal.bad { border-color: rgba(224,85,85,0.4); color: var(--red); background: rgba(224,85,85,0.08); }
+  .card-reveal.neutral { border-color: rgba(201,168,76,0.3); color: var(--gold); }
+
+  /* Log */
+  .log-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .log-panel h3 {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+  }
+
+  .log-entry {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    padding: 0.25rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    line-height: 1.4;
+  }
+
+  .log-entry.highlight { color: var(--gold-light); }
+
+  /* Rank-up modal */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--gold-dim);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(201,168,76,0.15);
+  }
+
+  .modal h2 { color: var(--gold); margin-bottom: 0.5rem; }
+  .modal p { color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 0.85rem; margin-bottom: 1.5rem; }
+  .modal-btns { display: flex; gap: 0.75rem; }
+  .modal-btns .btn { flex: 1; }
+
+  /* Winner screen */
+  #winner {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+    gap: 2rem;
+    text-align: center;
+  }
+
+  .winner-trophy { font-size: 5rem; animation: float 3s ease-in-out infinite; }
+
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-15px)} }
+
+  .winner-name {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 8vw, 4rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 50; }
+
+  .status-msg {
+    padding: 0.6rem 1rem;
+    background: rgba(201,168,76,0.08);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  /* Config notice */
+  .config-notice {
+    background: rgba(224,85,85,0.1);
+    border: 1px solid rgba(224,85,85,0.3);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--red);
+    line-height: 1.6;
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .config-notice strong { color: #ff8888; }
+  .config-notice code {
+    background: rgba(0,0,0,0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+  }
+
+  .copy-btn {
+    margin-top: 0.75rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+
+  .copy-btn:hover { background: var(--surface3); }
+</style>
+</head>
+<body>
+
+<!-- ══════════ LOBBY ══════════ -->
+<div id="lobby">
+  <div class="logo">
+    <h1>Wealth &amp; Rank</h1>
+    <p>Multiplayer Edition</p>
+  </div>
+
+  <div id="config-notice" class="config-notice" style="display:none">
+    <strong>⚠ Firebase not configured.</strong><br>
+    Open this file in a text editor and replace the <code>FIREBASE_CONFIG</code> block near the top of the &lt;script&gt; with your project's config from:<br>
+    Firebase Console → Project Settings → Your apps → Config
+    <br><br>
+    <button class="copy-btn" onclick="copyInstructions()">Copy setup instructions</button>
+  </div>
+
+  <div class="lobby-card">
+    <h2>Enter Your Name</h2>
+    <div>
+      <label>Display Name</label>
+      <input type="text" id="playerName" placeholder="e.g. Alex" maxlength="20">
+    </div>
+
+    <button class="btn btn-primary" onclick="createRoom()">Create New Room</button>
+
+    <div class="divider">or join existing</div>
+
+    <div>
+      <label>Room Code</label>
+      <input type="text" id="roomCodeInput" placeholder="e.g. XK7F" maxlength="6" style="text-transform:uppercase;letter-spacing:4px">
+    </div>
+
+    <button class="btn btn-secondary" onclick="joinRoom()">Join Room</button>
+  </div>
+</div>
+
+<!-- ══════════ WAITING ROOM ══════════ -->
+<div id="waiting">
+  <div class="logo">
+    <h1>Wealth &amp; Rank</h1>
+  </div>
+
+  <div class="room-code-box">
+    <label>Share this room code</label>
+    <div class="room-code" id="displayRoomCode">----</div>
+    <div style="font-size:0.75rem;color:var(--text-dim);margin-top:0.5rem;font-family:'DM Mono',monospace;">Tell your friends to join with this code</div>
+  </div>
+
+  <div class="player-list">
+    <h3>Players Connected</h3>
+    <ul id="waitingPlayerList"></ul>
+  </div>
+
+  <div id="startBtnContainer" style="width:100%;max-width:440px;display:none">
+    <button class="btn btn-primary" onclick="startGame()">Start Game</button>
+    <div style="text-align:center;margin-top:0.5rem;font-size:0.75rem;color:var(--text-dim);font-family:'DM Mono',monospace">
+      Only host can start · 2–4 players
+    </div>
+  </div>
+
+  <div id="waitingMsg" class="status-msg">Waiting for host to start…</div>
+</div>
+
+<!-- ══════════ GAME ══════════ -->
+<div id="game">
+  <div class="game-header">
+    <h1>Wealth &amp; Rank</h1>
+    <div class="room-tag" id="gameRoomTag">Room: ----</div>
+  </div>
+
+  <!-- Rank track -->
+  <div class="rank-track">
+    <div class="rank-track-label">Rank Ladder</div>
+    <div class="ranks-row" id="ranksRow"></div>
+  </div>
+
+  <!-- Player cards -->
+  <div class="players-grid" id="playersGrid"></div>
+
+  <!-- Action panel -->
+  <div class="action-panel">
+    <div class="turn-indicator" id="turnIndicator">Loading…</div>
+    <div class="dice-display" id="diceDisplay">🎲</div>
+    <div class="card-reveal" id="cardReveal" style="display:none"></div>
+    <div class="action-btns" id="actionBtns">
+      <button class="btn btn-gold" id="btnRoll" onclick="rollDice()" disabled>Roll Dice</button>
+      <button class="btn btn-outline" id="btnCard" onclick="drawCard()" disabled>Draw Card</button>
+      <button class="btn btn-gold" id="btnRankUp" onclick="openRankUpModal()" disabled style="display:none">Rank Up 💰</button>
+      <button class="btn btn-outline" id="btnEnd" onclick="endTurn()" disabled>End Turn</button>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="log-panel">
+    <h3>Game Log</h3>
+    <div id="logEntries"></div>
+  </div>
+</div>
+
+<!-- ══════════ WINNER ══════════ -->
+<div id="winner">
+  <div class="confetti" id="confetti"></div>
+  <div class="winner-trophy">🏆</div>
+  <div id="winnerName" class="winner-name">Player</div>
+  <p style="color:var(--text-dim);font-family:'DM Mono',monospace">has reached Billionaire status!</p>
+  <button class="btn btn-primary" onclick="resetGame()" style="max-width:300px">Play Again</button>
+</div>
+
+<!-- ══════════ RANK-UP MODAL ══════════ -->
+<div class="modal-backdrop" id="rankUpModal">
+  <div class="modal">
+    <h2>Rank Up? 🚀</h2>
+    <p id="rankUpModalText">Pay $5K to advance to Blue Collar?</p>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="confirmRankUp()">Pay &amp; Rank Up</button>
+      <button class="btn btn-secondary" onclick="closeRankUpModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+    // ═══════════════════════════════════════════════════════════════
+    //  🔥 FIREBASE CONFIG — Replace this block with your own config
+    //  Get it from: Firebase Console → Project Settings → Your apps
+    // ═══════════════════════════════════════════════════════════════
+    const FIREBASE_CONFIG = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+        projectId: "YOUR_PROJECT",
+        storageBucket: "YOUR_PROJECT.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+    // ═══════════════════════════════════════════════════════════════
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, get, update, onValue, push, remove, onDisconnect }
+        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // Check if config is placeholder
+    const isConfigured = FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY";
+    if (!isConfigured) {
+        document.getElementById('config-notice').style.display = 'block';
+    }
+
+    let app, db;
+    if (isConfigured) {
+        app = initializeApp(FIREBASE_CONFIG);
+        db = getDatabase(app);
+    }
+
+    // ── GAME DATA ───────────────────────────────────────────────────
+    const RANKS = [
+        { name: "Street", emoji: "🏚️", price: 0 },
+        { name: "Blue\nCollar", emoji: "🔧", price: 5000 },
+        { name: "White\nCollar", emoji: "💼", price: 12000 },
+        { name: "Manager", emoji: "📊", price: 25000 },
+        { name: "Director", emoji: "🏛️", price: 50000 },
+        { name: "Executive", emoji: "✈️", price: 90000 },
+        { name: "Millionaire", emoji: "💎", price: 150000 },
+        { name: "Billionaire", emoji: "👑", price: 0 }
+    ];
+
+    const CARDS = [
+        { text: "Lose $2K", type: "bad", effect: "lose2k" },
+        { text: "Move Down a Rank", type: "bad", effect: "rankdown" },
+        { text: "Go to Jail", type: "bad", effect: "jail" },
+        { text: "Double Your Money!", type: "good", effect: "double" },
+        { text: "Lose 25%", type: "bad", effect: "lose25" },
+        { text: "Bonus +$3K", type: "good", effect: "bonus3k" },
+    ];
+
+    const DICE_FACES = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+
+    function fmt(n) {
+        if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
+        if (n >= 1000) return `$${(n / 1000).toFixed(1)}K`;
+        return `$${n}`;
+    }
+
+    function genCode() {
+        return Math.random().toString(36).substring(2, 6).toUpperCase();
+    }
+
+    // ── STATE ────────────────────────────────────────────────────────
+    let myId = null;
+    let myName = '';
+    let roomCode = '';
+    let roomRef = null;
+    let unsubRoom = null;
+    let localState = null; // last known full state
+    let turnPhase = 'idle'; // idle | rolled | carded | done
+
+    // ── LOBBY ACTIONS ────────────────────────────────────────────────
+    window.createRoom = async function () {
+        if (!validateSetup()) return;
+        const code = genCode();
+        roomCode = code;
+        myId = 'p_' + Date.now();
+        myName = document.getElementById('playerName').value.trim();
+
+        const initialState = {
+            host: myId,
+            status: 'waiting',
+            turn: 0,
+            playerOrder: [myId],
+            players: {
+                [myId]: { name: myName, money: 1000, rank: 0, jailed: false, id: myId }
+            },
+            log: []
+        };
+
+        roomRef = ref(db, `rooms/${code}`);
+        await set(roomRef, initialState);
+        setupOnDisconnect();
+        subscribeRoom();
+        showWaiting();
+    };
+
+    window.joinRoom = async function () {
+        if (!validateSetup()) return;
+        const code = document.getElementById('roomCodeInput').value.toUpperCase().trim();
+        if (!code) { alert('Enter a room code'); return; }
+
+        myId = 'p_' + Date.now();
+        myName = document.getElementById('playerName').value.trim();
+        roomCode = code;
+        roomRef = ref(db, `rooms/${code}`);
+
+        const snap = await get(roomRef);
+        if (!snap.exists()) { alert('Room not found!'); return; }
+        const state = snap.val();
+        if (state.status !== 'waiting') { alert('Game already started!'); return; }
+        if (Object.keys(state.players).length >= 4) { alert('Room is full (max 4)!'); return; }
+
+        const updates = {};
+        updates[`rooms/${code}/players/${myId}`] = { name: myName, money: 1000, rank: 0, jailed: false, id: myId };
+        updates[`rooms/${code}/playerOrder`] = [...(state.playerOrder || []), myId];
+        await update(ref(db), updates);
+
+        setupOnDisconnect();
+        subscribeRoom();
+        showWaiting();
+    };
+
+    function validateSetup() {
+        if (!isConfigured) {
+            alert('Please configure Firebase first! See the red notice on screen.');
+            return false;
+        }
+        const name = document.getElementById('playerName').value.trim();
+        if (!name) { alert('Enter your name!'); return false; }
+        return true;
+    }
+
+    function setupOnDisconnect() {
+        // Remove player on disconnect
+        const playerRef = ref(db, `rooms/${roomCode}/players/${myId}`);
+        onDisconnect(playerRef).remove();
+    }
+
+    // ── WAITING ROOM ─────────────────────────────────────────────────
+    function showWaiting() {
+        document.getElementById('lobby').style.display = 'none';
+        document.getElementById('waiting').style.display = 'flex';
+        document.getElementById('displayRoomCode').textContent = roomCode;
+        document.getElementById('gameRoomTag').textContent = `Room: ${roomCode}`;
+    }
+
+    window.startGame = async function () {
+        if (!localState) return;
+        if (Object.keys(localState.players).length < 2) {
+            alert('Need at least 2 players to start!');
+            return;
+        }
+        await update(roomRef, { status: 'playing', turn: 0 });
+    };
+
+    // ── FIREBASE SUBSCRIPTION ────────────────────────────────────────
+    function subscribeRoom() {
+        if (unsubRoom) unsubRoom();
+        unsubRoom = onValue(roomRef, (snap) => {
+            if (!snap.exists()) return;
+            localState = snap.val();
+            if (localState.status === 'waiting') renderWaiting(localState);
+            else if (localState.status === 'playing') renderGame(localState);
+            else if (localState.status === 'won') renderWinner(localState);
+        });
+    }
+
+    // ── RENDER WAITING ───────────────────────────────────────────────
+    function renderWaiting(state) {
+        const ul = document.getElementById('waitingPlayerList');
+        ul.innerHTML = '';
+        const order = state.playerOrder || Object.keys(state.players);
+        order.forEach(pid => {
+            const p = state.players[pid];
+            if (!p) return;
+            const li = document.createElement('li');
+            li.innerHTML = `<div class="pip"></div>${p.name}${pid === state.host ? '<span class="host-badge">HOST</span>' : ''}`;
+            ul.appendChild(li);
+        });
+
+        const startBtn = document.getElementById('startBtnContainer');
+        const waitMsg = document.getElementById('waitingMsg');
+        const isHost = state.host === myId;
+        startBtn.style.display = isHost ? 'block' : 'none';
+        waitMsg.style.display = isHost ? 'none' : 'block';
+    }
+
+    // ── RENDER GAME ──────────────────────────────────────────────────
+    function renderGame(state) {
+        document.getElementById('waiting').style.display = 'none';
+        document.getElementById('game').style.display = 'flex';
+
+        renderRankTrack(state);
+        renderPlayerCards(state);
+        renderTurnControls(state);
+        renderLog(state);
+    }
+
+    function renderRankTrack(state) {
+        const row = document.getElementById('ranksRow');
+        row.innerHTML = '';
+        RANKS.forEach((rank, i) => {
+            const step = document.createElement('div');
+            step.className = 'rank-step';
+
+            // Find players at this rank
+            const here = Object.values(state.players).filter(p => p.rank === i);
+            const dotsHtml = here.map(p =>
+                `<span class="rank-player-dot" title="${p.name}">${p.name.slice(0, 2)}</span>`
+            ).join('');
+
+            step.innerHTML = `
+      <div class="rank-node${here.length ? ' active' : ''}">
+        <div class="rank-emoji">${rank.emoji}</div>
+        <div class="rank-name">${rank.name.replace('\n', ' ')}</div>
+        ${rank.price ? `<div class="rank-price">${fmt(rank.price)}</div>` : ''}
+        <div class="rank-players">${dotsHtml}</div>
+      </div>`;
+            row.appendChild(step);
+        });
+    }
+
+    function renderPlayerCards(state) {
+        const grid = document.getElementById('playersGrid');
+        grid.innerHTML = '';
+        const order = state.playerOrder || Object.keys(state.players);
+        order.forEach(pid => {
+            const p = state.players[pid];
+            if (!p) return;
+            const isMe = pid === myId;
+            const isTurn = order[state.turn % order.length] === pid;
+            const card = document.createElement('div');
+            card.className = `player-card${isTurn ? ' active-turn' : ''}${p.jailed ? ' jailed' : ''}${isMe ? ' me' : ''}`;
+            card.innerHTML = `
+      <div class="pc-name">${p.name}${isMe ? '<span class="you-tag">YOU</span>' : ''}</div>
+      <div class="pc-money">${fmt(p.money)}</div>
+      <div class="pc-rank">${RANKS[p.rank].emoji} ${RANKS[p.rank].name.replace('\n', ' ')}</div>`;
+            grid.appendChild(card);
+        });
+    }
+
+    function renderTurnControls(state) {
+        const order = state.playerOrder || Object.keys(state.players);
+        const currentPid = order[state.turn % order.length];
+        const isMyTurn = currentPid === myId;
+        const me = state.players[myId];
+        const currentPlayer = state.players[currentPid];
+
+        const indicator = document.getElementById('turnIndicator');
+        if (isMyTurn) {
+            indicator.innerHTML = me?.jailed ? 'Your turn — <span>🔒 You\'re in jail — turn skipped</span>' : 'Your turn — <span>make a move!</span>';
+        } else {
+            indicator.innerHTML = `Waiting for <span>${currentPlayer?.name || '?'}</span> to play…`;
+        }
+
+        // Phase logic
+        const phase = state.phase || 'idle';
+        const rolled = phase === 'rolled' || phase === 'carded' || phase === 'done';
+        const carded = phase === 'carded' || phase === 'done';
+
+        document.getElementById('btnRoll').disabled = !isMyTurn || rolled || me?.jailed;
+        document.getElementById('btnCard').disabled = !isMyTurn || !rolled || carded;
+        document.getElementById('btnEnd').disabled = !isMyTurn || !rolled;
+
+        // Rank-up button
+        const nextRank = me ? me.rank + 1 : -1;
+        const canRankUp = isMyTurn && me && nextRank < RANKS.length && me.money >= RANKS[nextRank].price && RANKS[nextRank].price > 0;
+        const rankBtn = document.getElementById('btnRankUp');
+        rankBtn.style.display = isMyTurn ? 'block' : 'none';
+        rankBtn.disabled = !canRankUp;
+        if (canRankUp) rankBtn.textContent = `Rank Up → ${RANKS[nextRank].name.replace('\n', ' ')} (${fmt(RANKS[nextRank].price)})`;
+
+        // Dice / card display
+        if (state.lastRoll) {
+            document.getElementById('diceDisplay').textContent = DICE_FACES[state.lastRoll - 1] + ' ' + DICE_FACES[state.lastRoll - 1];
+            document.getElementById('diceDisplay').title = `Rolled ${state.lastRoll} → +${fmt(state.lastRoll * 1000)}`;
+        } else {
+            document.getElementById('diceDisplay').textContent = '🎲';
+        }
+
+        const cardEl = document.getElementById('cardReveal');
+        if (state.lastCard) {
+            cardEl.style.display = 'flex';
+            cardEl.textContent = state.lastCard.text;
+            cardEl.className = 'card-reveal ' + (state.lastCard.type || 'neutral');
+        } else {
+            cardEl.style.display = 'none';
+        }
+
+        // Jail auto-end
+        if (isMyTurn && me?.jailed && phase === 'idle') {
+            setTimeout(() => endTurn(true), 1200);
+        }
+    }
+
+    function renderLog(state) {
+        const el = document.getElementById('logEntries');
+        el.innerHTML = '';
+        const entries = state.log ? Object.values(state.log) : [];
+        entries.slice(-30).reverse().forEach(e => {
+            const d = document.createElement('div');
+            d.className = 'log-entry' + (e.highlight ? ' highlight' : '');
+            d.textContent = e.text;
+            el.appendChild(d);
+        });
+    }
+
+    // ── ACTIONS ──────────────────────────────────────────────────────
+    window.rollDice = async function () {
+        if (!localState) return;
+        const roll = Math.floor(Math.random() * 6) + 1;
+        const earned = roll * 1000;
+        const me = localState.players[myId];
+        if (!me) return;
+
+        document.getElementById('diceDisplay').className = 'dice-display rolling';
+        setTimeout(() => document.getElementById('diceDisplay').className = 'dice-display', 600);
+
+        const newMoney = me.money + earned;
+        const updates = {};
+        updates[`rooms/${roomCode}/players/${myId}/money`] = newMoney;
+        updates[`rooms/${roomCode}/lastRoll`] = roll;
+        updates[`rooms/${roomCode}/lastCard`] = null;
+        updates[`rooms/${roomCode}/phase`] = 'rolled';
+        addLog(updates, `${me.name} rolled a ${roll} and earned ${fmt(earned)}! (Balance: ${fmt(newMoney)})`);
+        await update(ref(db), updates);
+    };
+
+    window.drawCard = async function () {
+        if (!localState) return;
+        const me = localState.players[myId];
+        if (!me) return;
+
+        const card = CARDS[Math.floor(Math.random() * CARDS.length)];
+        const order = localState.playerOrder || Object.keys(localState.players);
+        const updates = {};
+        updates[`rooms/${roomCode}/lastCard`] = card;
+        updates[`rooms/${roomCode}/phase`] = 'carded';
+
+        let logText = `${me.name} drew: "${card.text}"`;
+        let newMoney = me.money;
+        let newRank = me.rank;
+        let jailed = me.jailed;
+
+        switch (card.effect) {
+            case 'lose2k':
+                newMoney = Math.max(0, me.money - 2000);
+                logText += ` → Lost $2K (now ${fmt(newMoney)})`;
+                break;
+            case 'rankdown':
+                newRank = Math.max(0, me.rank - 1);
+                logText += newRank < me.rank ? ` → Dropped to ${RANKS[newRank].name.replace('\n', ' ')}!` : ` → Already at Street Level`;
+                break;
+            case 'jail':
+                jailed = true;
+                logText += ` → 🔒 Goes to jail! (skip next turn)`;
+                break;
+            case 'double':
+                newMoney = me.money * 2;
+                logText += ` → 💰 DOUBLED to ${fmt(newMoney)}!`;
+                break;
+            case 'lose25':
+                newMoney = Math.floor(me.money * 0.75);
+                logText += ` → Lost 25%! (now ${fmt(newMoney)})`;
+                break;
+            case 'bonus3k':
+                newMoney = me.money + 3000;
+                logText += ` → +$3K bonus! (now ${fmt(newMoney)})`;
+                break;
+        }
+
+        updates[`rooms/${roomCode}/players/${myId}/money`] = newMoney;
+        updates[`rooms/${roomCode}/players/${myId}/rank`] = newRank;
+        updates[`rooms/${roomCode}/players/${myId}/jailed`] = jailed;
+        addLog(updates, logText, card.type === 'good');
+        await update(ref(db), updates);
+    };
+
+    window.endTurn = async function (auto = false) {
+        if (!localState) return;
+        const order = localState.playerOrder || Object.keys(localState.players);
+        const me = localState.players[myId];
+        const nextTurn = (localState.turn + 1) % order.length;
+
+        const updates = {};
+        updates[`rooms/${roomCode}/turn`] = localState.turn + 1;
+        updates[`rooms/${roomCode}/phase`] = 'idle';
+        updates[`rooms/${roomCode}/lastRoll`] = null;
+        updates[`rooms/${roomCode}/lastCard`] = null;
+
+        // Unjail after skipped turn
+        if (me?.jailed) {
+            updates[`rooms/${roomCode}/players/${myId}/jailed`] = false;
+            if (!auto) addLog(updates, `${me.name} is released from jail.`);
+        }
+
+        const nextPlayer = localState.players[order[nextTurn % order.length]];
+        if (!auto) addLog(updates, `--- ${nextPlayer?.name || '?'}'s turn ---`);
+        await update(ref(db), updates);
+    };
+
+    // ── RANK UP ──────────────────────────────────────────────────────
+    window.openRankUpModal = function () {
+        if (!localState) return;
+        const me = localState.players[myId];
+        const nextRank = me.rank + 1;
+        document.getElementById('rankUpModalText').textContent =
+            `Pay ${fmt(RANKS[nextRank].price)} to advance to ${RANKS[nextRank].name.replace('\n', ' ')}?`;
+        document.getElementById('rankUpModal').classList.add('open');
+    };
+
+    window.closeRankUpModal = function () {
+        document.getElementById('rankUpModal').classList.remove('open');
+    };
+
+    window.confirmRankUp = async function () {
+        if (!localState) return;
+        const me = localState.players[myId];
+        const nextRank = me.rank + 1;
+        const price = RANKS[nextRank].price;
+        const newMoney = me.money - price;
+        const updates = {};
+        updates[`rooms/${roomCode}/players/${myId}/money`] = newMoney;
+        updates[`rooms/${roomCode}/players/${myId}/rank`] = nextRank;
+
+        addLog(updates, `${me.name} paid ${fmt(price)} to reach ${RANKS[nextRank].emoji} ${RANKS[nextRank].name.replace('\n', ' ')}!`, true);
+
+        // Win condition
+        if (nextRank === RANKS.length - 1) {
+            updates[`rooms/${roomCode}/status`] = 'won';
+            updates[`rooms/${roomCode}/winner`] = myId;
+            addLog(updates, `🏆 ${me.name} has become a BILLIONAIRE! GAME OVER!`, true);
+        }
+
+        await update(ref(db), updates);
+        closeRankUpModal();
+    };
+
+    // ── WINNER ───────────────────────────────────────────────────────
+    function renderWinner(state) {
+        document.getElementById('game').style.display = 'none';
+        document.getElementById('winner').style.display = 'flex';
+        const winner = state.players[state.winner];
+        document.getElementById('winnerName').textContent = winner?.name || 'Someone';
+        spawnConfetti();
+    }
+
+    function spawnConfetti() {
+        const container = document.getElementById('confetti');
+        container.innerHTML = '';
+        const colors = ['#C9A84C', '#E8C96A', '#fff', '#4CAF50', '#5588ee'];
+        for (let i = 0; i < 80; i++) {
+            const el = document.createElement('div');
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            el.style.cssText = `
+      position:absolute;
+      left:${Math.random() * 100}%;
+      top:-20px;
+      width:${6 + Math.random() * 8}px;
+      height:${6 + Math.random() * 8}px;
+      background:${color};
+      border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
+      animation:fall ${2 + Math.random() * 3}s linear ${Math.random() * 2}s infinite;
+      opacity:${0.6 + Math.random() * 0.4};
+    `;
+            container.appendChild(el);
+        }
+        const style = document.createElement('style');
+        style.textContent = `@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}`;
+        container.appendChild(style);
+    }
+
+    window.resetGame = async function () {
+        if (!localState || localState.host !== myId) {
+            alert('Only the host can reset!');
+            return;
+        }
+        // Re-init all players
+        const players = {};
+        Object.keys(localState.players).forEach(pid => {
+            players[pid] = { ...localState.players[pid], money: 1000, rank: 0, jailed: false };
+        });
+        await set(roomRef, {
+            host: localState.host,
+            status: 'playing',
+            turn: 0,
+            phase: 'idle',
+            playerOrder: localState.playerOrder,
+            players,
+            log: []
+        });
+        document.getElementById('winner').style.display = 'none';
+    };
+
+    // ── LOG HELPER ───────────────────────────────────────────────────
+    function addLog(updates, text, highlight = false) {
+        const key = `rooms/${roomCode}/log/${Date.now()}_${Math.random().toString(36).slice(2, 5)}`;
+        updates[key] = { text, highlight };
+    }
+
+    // ── COPY INSTRUCTIONS ────────────────────────────────────────────
+    window.copyInstructions = function () {
+        const text = `Wealth & Rank — Firebase Setup:
+1. Go to https://console.firebase.google.com
+2. Create a new project (free Spark plan)
+3. Add a Web app to the project
+4. Enable Realtime Database → Start in test mode
+5. Go to Project Settings → Your apps → Config
+6. Open wealth-and-rank.html in a text editor
+7. Find the FIREBASE_CONFIG block and replace with your config
+8. Host the file anywhere (GitHub Pages, Netlify, etc.)`;
+        navigator.clipboard.writeText(text).then(() => alert('Instructions copied!'));
+    };
+
+    <script type="module">
+  // Import the functions you need from the SDKs you need
+        import {initializeApp} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import {getAnalytics} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-analytics.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_dgGc79a0rIhcFQEjYbNq2mUYFHSC7Z8",
+        authDomain: "onlinekern-8d334.firebaseapp.com",
+        projectId: "onlinekern-8d334",
+        storageBucket: "onlinekern-8d334.firebasestorage.app",
+        messagingSenderId: "427890270027",
+        appId: "1:427890270027:web:b154228cbcc17e937052ce",
+        measurementId: "G-WM8HD37SR0"
+  };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+</script>
+</script>
+</body>
+</html>
