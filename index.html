@@ -1098,18 +1098,69 @@
     };
 
     window.drawCard = async function () {
-        if (!localState || turnPhase !== 'rolled') return;
-        turnPhase = 'carded';
-        const card = CARDS[Math.floor(Math.random() * CARDS.length)];
-        
-        const reveal = document.getElementById('cardReveal');
-        reveal.textContent = card.text;
-        reveal.className = `card-reveal ${card.type}`;
-        reveal.style.display = 'flex';
-        
-        addLog(`Drew: ${card.text}`);
-        renderTurnControls(localState);
-    };
+    if (!localState || turnPhase !== 'rolled') return;
+
+    turnPhase = 'carded';
+
+    const card = CARDS[Math.floor(Math.random() * CARDS.length)];
+    const player = localState.players[myId];
+
+    let newMoney = player.money;
+    let newRank = player.rank;
+    let jailed = player.jailed;
+
+    // Apply card effects
+    switch(card.effect) {
+
+        case "lose2k":
+            newMoney -= 2000;
+            break;
+
+        case "bonus3k":
+            newMoney += 3000;
+            break;
+
+        case "double":
+            newMoney *= 2;
+            break;
+
+        case "lose25":
+            newMoney = Math.floor(newMoney * 0.75);
+            break;
+
+        case "rankdown":
+            if (newRank > 0) {
+                newRank--;
+            }
+            break;
+
+        case "jail":
+            jailed = true;
+            break;
+    }
+
+    // Prevent negative money
+    if (newMoney < 0) {
+        newMoney = 0;
+    }
+
+    // Save to Firebase
+    await update(ref(db, `rooms/${roomCode}/players/${myId}`), {
+        money: newMoney,
+        rank: newRank,
+        jailed: jailed
+    });
+
+    // Show card UI
+    const reveal = document.getElementById('cardReveal');
+    reveal.textContent = card.text;
+    reveal.className = `card-reveal ${card.type}`;
+    reveal.style.display = 'flex';
+
+    addLog(`${player.name} drew: ${card.text}`);
+
+    renderTurnControls(localState);
+};
 
     window.endTurn = async function () {
         if (!localState) return;
