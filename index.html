@@ -690,7 +690,7 @@
     Open this file in a text editor and replace the <code>FIREBASE_CONFIG</code> block near the top of the &lt;script&gt; with your project's config from:<br>
     Firebase Console → Project Settings → Your apps → Config
     <br><br>
-    <button class="copy-btn" onclick="copyInstructions()">Copy setup instructions</button>
+    <button class="copy-btn" onclick="window.copyInstructions()">Copy setup instructions</button>
   </div>
 
   <div class="lobby-card">
@@ -700,7 +700,7 @@
       <input type="text" id="playerName" placeholder="e.g. Alex" maxlength="20">
     </div>
 
-    <button class="btn btn-primary" onclick="createRoom()">Create New Room</button>
+    <button class="btn btn-primary" onclick="window.createRoom()">Create New Room</button>
 
     <div class="divider">or join existing</div>
 
@@ -709,7 +709,7 @@
       <input type="text" id="roomCodeInput" placeholder="e.g. XK7F" maxlength="6" style="text-transform:uppercase;letter-spacing:4px">
     </div>
 
-    <button class="btn btn-secondary" onclick="joinRoom()">Join Room</button>
+    <button class="btn btn-secondary" onclick="window.joinRoom()">Join Room</button>
   </div>
 </div>
 
@@ -731,7 +731,7 @@
   </div>
 
   <div id="startBtnContainer" style="width:100%;max-width:440px;display:none">
-    <button class="btn btn-primary" onclick="startGame()">Start Game</button>
+    <button class="btn btn-primary" onclick="window.startGame()">Start Game</button>
     <div style="text-align:center;margin-top:0.5rem;font-size:0.75rem;color:var(--text-dim);font-family:'DM Mono',monospace">
       Only host can start · 2–4 players
     </div>
@@ -762,10 +762,10 @@
     <div class="dice-display" id="diceDisplay">🎲</div>
     <div class="card-reveal" id="cardReveal" style="display:none"></div>
     <div class="action-btns" id="actionBtns">
-      <button class="btn btn-gold" id="btnRoll" onclick="rollDice()" disabled>Roll Dice</button>
-      <button class="btn btn-outline" id="btnCard" onclick="drawCard()" disabled>Draw Card</button>
-      <button class="btn btn-gold" id="btnRankUp" onclick="openRankUpModal()" disabled style="display:none">Rank Up 💰</button>
-      <button class="btn btn-outline" id="btnEnd" onclick="endTurn()" disabled>End Turn</button>
+      <button class="btn btn-gold" id="btnRoll" onclick="window.rollDice()" disabled>Roll Dice</button>
+      <button class="btn btn-outline" id="btnCard" onclick="window.drawCard()" disabled>Draw Card</button>
+      <button class="btn btn-gold" id="btnRankUp" onclick="window.openRankUpModal()" disabled style="display:none">Rank Up 💰</button>
+      <button class="btn btn-outline" id="btnEnd" onclick="window.endTurn()" disabled>End Turn</button>
     </div>
   </div>
 
@@ -782,7 +782,7 @@
   <div class="winner-trophy">🏆</div>
   <div id="winnerName" class="winner-name">Player</div>
   <p style="color:var(--text-dim);font-family:'DM Mono',monospace">has reached Billionaire status!</p>
-  <button class="btn btn-primary" onclick="resetGame()" style="max-width:300px">Play Again</button>
+  <button class="btn btn-primary" onclick="window.resetGame()" style="max-width:300px">Play Again</button>
 </div>
 
 <!-- ══════════ RANK-UP MODAL ══════════ -->
@@ -791,8 +791,8 @@
     <h2>Rank Up? 🚀</h2>
     <p id="rankUpModalText">Pay $5K to advance to Blue Collar?</p>
     <div class="modal-btns">
-      <button class="btn btn-primary" onclick="confirmRankUp()">Pay &amp; Rank Up</button>
-      <button class="btn btn-secondary" onclick="closeRankUpModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="window.confirmRankUp()">Pay &amp; Rank Up</button>
+      <button class="btn btn-secondary" onclick="window.closeRankUpModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -891,10 +891,15 @@
         };
 
         roomRef = ref(db, `rooms/${code}`);
-        await set(roomRef, initialState);
-        setupOnDisconnect();
-        subscribeRoom();
-        showWaiting();
+        try {
+            await set(roomRef, initialState);
+            setupOnDisconnect();
+            subscribeRoom();
+            showWaiting();
+        } catch (error) {
+            console.error('Error creating room:', error);
+            alert('Error: ' + error.message);
+        }
     };
 
     window.joinRoom = async function () {
@@ -907,20 +912,25 @@
         roomCode = code;
         roomRef = ref(db, `rooms/${code}`);
 
-        const snap = await get(roomRef);
-        if (!snap.exists()) { alert('Room not found!'); return; }
-        const state = snap.val();
-        if (state.status !== 'waiting') { alert('Game already started!'); return; }
-        if (Object.keys(state.players).length >= 4) { alert('Room is full (max 4)!'); return; }
+        try {
+            const snap = await get(roomRef);
+            if (!snap.exists()) { alert('Room not found!'); return; }
+            const state = snap.val();
+            if (state.status !== 'waiting') { alert('Game already started!'); return; }
+            if (Object.keys(state.players).length >= 4) { alert('Room is full (max 4)!'); return; }
 
-        const updates = {};
-        updates[`rooms/${code}/players/${myId}`] = { name: myName, money: 1000, rank: 0, jailed: false, id: myId };
-        updates[`rooms/${code}/playerOrder`] = [...(state.playerOrder || []), myId];
-        await update(ref(db), updates);
+            const updates = {};
+            updates[`rooms/${code}/players/${myId}`] = { name: myName, money: 1000, rank: 0, jailed: false, id: myId };
+            updates[`rooms/${code}/playerOrder`] = [...(state.playerOrder || []), myId];
+            await update(ref(db), updates);
 
-        setupOnDisconnect();
-        subscribeRoom();
-        showWaiting();
+            setupOnDisconnect();
+            subscribeRoom();
+            showWaiting();
+        } catch (error) {
+            console.error('Error joining room:', error);
+            alert('Error: ' + error.message);
+        }
     };
 
     function validateSetup() {
@@ -1000,215 +1010,116 @@
     }
 
     function renderRankTrack(state) {
-        const row = document.getElementById('ranksRow');
-        row.innerHTML = '';
-        RANKS.forEach((rank, i) => {
+        const container = document.getElementById('ranksRow');
+        container.innerHTML = '';
+        RANKS.forEach((rank, idx) => {
             const step = document.createElement('div');
             step.className = 'rank-step';
-
-            // Find players at this rank
-            const here = Object.values(state.players).filter(p => p.rank === i);
-            const dotsHtml = here.map(p =>
-                `<span class="rank-player-dot" title="${p.name}">${p.name.slice(0, 2)}</span>`
-            ).join('');
-
-            step.innerHTML = `
-      <div class="rank-node${here.length ? ' active' : ''}">
-        <div class="rank-emoji">${rank.emoji}</div>
-        <div class="rank-name">${rank.name.replace('\n', ' ')}</div>
-        ${rank.price ? `<div class="rank-price">${fmt(rank.price)}</div>` : ''}
-        <div class="rank-players">${dotsHtml}</div>
-      </div>`;
-            row.appendChild(step);
+            const node = document.createElement('div');
+            node.className = 'rank-node';
+            
+            const playersAtRank = Object.values(state.players).filter(p => p.rank === idx).length;
+            if (playersAtRank > 0) node.classList.add('active');
+            
+            node.innerHTML = `
+                <div class="rank-name">${rank.name}</div>
+                <div class="rank-emoji">${rank.emoji}</div>
+                ${rank.price > 0 ? `<div class="rank-price">${fmt(rank.price)}</div>` : ''}
+                <div class="rank-players">
+                    ${Array.from({length: playersAtRank}).map(() => '<div class="rank-player-dot">●</div>').join('')}
+                </div>
+            `;
+            step.appendChild(node);
+            container.appendChild(step);
         });
     }
 
     function renderPlayerCards(state) {
-        const grid = document.getElementById('playersGrid');
-        grid.innerHTML = '';
-        const order = state.playerOrder || Object.keys(state.players);
-        order.forEach(pid => {
-            const p = state.players[pid];
-            if (!p) return;
-            const isMe = pid === myId;
-            const isTurn = order[state.turn % order.length] === pid;
+        const container = document.getElementById('playersGrid');
+        container.innerHTML = '';
+        const currentPlayer = state.players[state.playerOrder[state.turn % state.playerOrder.length]];
+        
+        Object.values(state.players).forEach(player => {
             const card = document.createElement('div');
-            card.className = `player-card${isTurn ? ' active-turn' : ''}${p.jailed ? ' jailed' : ''}${isMe ? ' me' : ''}`;
+            card.className = 'player-card';
+            if (player.id === myId) card.classList.add('me');
+            if (player.id === currentPlayer?.id) card.classList.add('active-turn');
+            if (player.jailed) card.classList.add('jailed');
+            
             card.innerHTML = `
-      <div class="pc-name">${p.name}${isMe ? '<span class="you-tag">YOU</span>' : ''}</div>
-      <div class="pc-money">${fmt(p.money)}</div>
-      <div class="pc-rank">${RANKS[p.rank].emoji} ${RANKS[p.rank].name.replace('\n', ' ')}</div>`;
-            grid.appendChild(card);
+                <div class="pc-name">${player.name}${player.id === myId ? '<span class="you-tag">YOU</span>' : ''}</div>
+                <div class="pc-money">${fmt(player.money)}</div>
+                <div class="pc-rank">${RANKS[player.rank].emoji} ${RANKS[player.rank].name}</div>
+            `;
+            container.appendChild(card);
         });
     }
 
     function renderTurnControls(state) {
-        const order = state.playerOrder || Object.keys(state.players);
-        const currentPid = order[state.turn % order.length];
-        const isMyTurn = currentPid === myId;
-        const me = state.players[myId];
-        const currentPlayer = state.players[currentPid];
-
+        const currentPlayer = state.playerOrder[state.turn % state.playerOrder.length];
+        const isMyTurn = currentPlayer === myId;
         const indicator = document.getElementById('turnIndicator');
-        if (isMyTurn) {
-            indicator.innerHTML = me?.jailed ? 'Your turn — <span>🔒 You\'re in jail — turn skipped</span>' : 'Your turn — <span>make a move!</span>';
-        } else {
-            indicator.innerHTML = `Waiting for <span>${currentPlayer?.name || '?'}</span> to play…`;
-        }
-
-        // Phase logic
-        const phase = state.phase || 'idle';
-        const rolled = phase === 'rolled' || phase === 'carded' || phase === 'done';
-        const carded = phase === 'carded' || phase === 'done';
-
-        document.getElementById('btnRoll').disabled = !isMyTurn || rolled || me?.jailed;
-        document.getElementById('btnCard').disabled = !isMyTurn || !rolled || carded;
-        document.getElementById('btnEnd').disabled = !isMyTurn || !rolled;
-
-        // Rank-up button
-        const nextRank = me ? me.rank + 1 : -1;
-        const canRankUp = isMyTurn && me && nextRank < RANKS.length && me.money >= RANKS[nextRank].price && RANKS[nextRank].price > 0;
-        const rankBtn = document.getElementById('btnRankUp');
-        rankBtn.style.display = isMyTurn ? 'block' : 'none';
-        rankBtn.disabled = !canRankUp;
-        if (canRankUp) rankBtn.textContent = `Rank Up → ${RANKS[nextRank].name.replace('\n', ' ')} (${fmt(RANKS[nextRank].price)})`;
-
-        // Dice / card display
-        if (state.lastRoll) {
-            document.getElementById('diceDisplay').textContent = DICE_FACES[state.lastRoll - 1] + ' ' + DICE_FACES[state.lastRoll - 1];
-            document.getElementById('diceDisplay').title = `Rolled ${state.lastRoll} → +${fmt(state.lastRoll * 1000)}`;
-        } else {
-            document.getElementById('diceDisplay').textContent = '🎲';
-        }
-
-        const cardEl = document.getElementById('cardReveal');
-        if (state.lastCard) {
-            cardEl.style.display = 'flex';
-            cardEl.textContent = state.lastCard.text;
-            cardEl.className = 'card-reveal ' + (state.lastCard.type || 'neutral');
-        } else {
-            cardEl.style.display = 'none';
-        }
-
-        // Jail auto-end
-        if (isMyTurn && me?.jailed && phase === 'idle') {
-            setTimeout(() => endTurn(true), 1200);
-        }
+        indicator.innerHTML = isMyTurn ? 
+            `Your turn! <span>@${state.players[myId].name}</span>` : 
+            `${state.players[currentPlayer].name}'s turn`;
+        
+        document.getElementById('btnRoll').disabled = !isMyTurn || turnPhase !== 'idle';
+        document.getElementById('btnCard').disabled = !isMyTurn || turnPhase === 'idle';
+        document.getElementById('btnEnd').disabled = !isMyTurn || turnPhase === 'idle';
     }
 
     function renderLog(state) {
-        const el = document.getElementById('logEntries');
-        el.innerHTML = '';
-        const entries = state.log ? Object.values(state.log) : [];
-        entries.slice(-30).reverse().forEach(e => {
-            const d = document.createElement('div');
-            d.className = 'log-entry' + (e.highlight ? ' highlight' : '');
-            d.textContent = e.text;
-            el.appendChild(d);
+        const container = document.getElementById('logEntries');
+        container.innerHTML = '';
+        (state.log || []).slice(-10).reverse().forEach(entry => {
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            if (entry.highlight) div.classList.add('highlight');
+            div.textContent = entry.message;
+            container.appendChild(div);
         });
     }
 
-    // ── ACTIONS ──────────────────────────────────────────────────────
     window.rollDice = async function () {
-        if (!localState) return;
-        const roll = Math.floor(Math.random() * 6) + 1;
-        const earned = roll * 1000;
-        const me = localState.players[myId];
-        if (!me) return;
-
-        document.getElementById('diceDisplay').className = 'dice-display rolling';
-        setTimeout(() => document.getElementById('diceDisplay').className = 'dice-display', 600);
-
-        const newMoney = me.money + earned;
-        const updates = {};
-        updates[`rooms/${roomCode}/players/${myId}/money`] = newMoney;
-        updates[`rooms/${roomCode}/lastRoll`] = roll;
-        updates[`rooms/${roomCode}/lastCard`] = null;
-        updates[`rooms/${roomCode}/phase`] = 'rolled';
-        addLog(updates, `${me.name} rolled a ${roll} and earned ${fmt(earned)}! (Balance: ${fmt(newMoney)})`);
-        await update(ref(db), updates);
+        if (!localState || turnPhase !== 'idle') return;
+        turnPhase = 'rolled';
+        const dice1 = Math.floor(Math.random() * 6) + 1;
+        const dice2 = Math.floor(Math.random() * 6) + 1;
+        const total = dice1 + dice2;
+        
+        document.getElementById('diceDisplay').textContent = DICE_FACES[dice1-1] + ' ' + DICE_FACES[dice2-1];
+        document.getElementById('diceDisplay').classList.add('rolling');
+        setTimeout(() => {
+            document.getElementById('diceDisplay').classList.remove('rolling');
+        }, 500);
+        
+        addLog(`Rolled ${total}`);
+        renderTurnControls(localState);
     };
 
     window.drawCard = async function () {
-        if (!localState) return;
-        const me = localState.players[myId];
-        if (!me) return;
-
+        if (!localState || turnPhase !== 'rolled') return;
+        turnPhase = 'carded';
         const card = CARDS[Math.floor(Math.random() * CARDS.length)];
-        const order = localState.playerOrder || Object.keys(localState.players);
-        const updates = {};
-        updates[`rooms/${roomCode}/lastCard`] = card;
-        updates[`rooms/${roomCode}/phase`] = 'carded';
-
-        let logText = `${me.name} drew: "${card.text}"`;
-        let newMoney = me.money;
-        let newRank = me.rank;
-        let jailed = me.jailed;
-
-        switch (card.effect) {
-            case 'lose2k':
-                newMoney = Math.max(0, me.money - 2000);
-                logText += ` → Lost $2K (now ${fmt(newMoney)})`;
-                break;
-            case 'rankdown':
-                newRank = Math.max(0, me.rank - 1);
-                logText += newRank < me.rank ? ` → Dropped to ${RANKS[newRank].name.replace('\n', ' ')}!` : ` → Already at Street Level`;
-                break;
-            case 'jail':
-                jailed = true;
-                logText += ` → 🔒 Goes to jail! (skip next turn)`;
-                break;
-            case 'double':
-                newMoney = me.money * 2;
-                logText += ` → 💰 DOUBLED to ${fmt(newMoney)}!`;
-                break;
-            case 'lose25':
-                newMoney = Math.floor(me.money * 0.75);
-                logText += ` → Lost 25%! (now ${fmt(newMoney)})`;
-                break;
-            case 'bonus3k':
-                newMoney = me.money + 3000;
-                logText += ` → +$3K bonus! (now ${fmt(newMoney)})`;
-                break;
-        }
-
-        updates[`rooms/${roomCode}/players/${myId}/money`] = newMoney;
-        updates[`rooms/${roomCode}/players/${myId}/rank`] = newRank;
-        updates[`rooms/${roomCode}/players/${myId}/jailed`] = jailed;
-        addLog(updates, logText, card.type === 'good');
-        await update(ref(db), updates);
+        
+        const reveal = document.getElementById('cardReveal');
+        reveal.textContent = card.text;
+        reveal.className = `card-reveal ${card.type}`;
+        reveal.style.display = 'flex';
+        
+        addLog(`Drew: ${card.text}`);
+        renderTurnControls(localState);
     };
 
-    window.endTurn = async function (auto = false) {
+    window.endTurn = async function () {
         if (!localState) return;
-        const order = localState.playerOrder || Object.keys(localState.players);
-        const me = localState.players[myId];
-        const nextTurn = (localState.turn + 1) % order.length;
-
-        const updates = {};
-        updates[`rooms/${roomCode}/turn`] = localState.turn + 1;
-        updates[`rooms/${roomCode}/phase`] = 'idle';
-        updates[`rooms/${roomCode}/lastRoll`] = null;
-        updates[`rooms/${roomCode}/lastCard`] = null;
-
-        // Unjail after skipped turn
-        if (me?.jailed) {
-            updates[`rooms/${roomCode}/players/${myId}/jailed`] = false;
-            if (!auto) addLog(updates, `${me.name} is released from jail.`);
-        }
-
-        const nextPlayer = localState.players[order[nextTurn % order.length]];
-        if (!auto) addLog(updates, `--- ${nextPlayer?.name || '?'}'s turn ---`);
-        await update(ref(db), updates);
+        const newTurn = (localState.turn + 1) % localState.playerOrder.length;
+        turnPhase = 'idle';
+        document.getElementById('cardReveal').style.display = 'none';
+        await update(roomRef, { turn: newTurn });
     };
 
-    // ── RANK UP ──────────────────────────────────────────────────────
     window.openRankUpModal = function () {
-        if (!localState) return;
-        const me = localState.players[myId];
-        const nextRank = me.rank + 1;
-        document.getElementById('rankUpModalText').textContent =
-            `Pay ${fmt(RANKS[nextRank].price)} to advance to ${RANKS[nextRank].name.replace('\n', ' ')}?`;
         document.getElementById('rankUpModal').classList.add('open');
     };
 
@@ -1217,127 +1128,26 @@
     };
 
     window.confirmRankUp = async function () {
-        if (!localState) return;
-        const me = localState.players[myId];
-        const nextRank = me.rank + 1;
-        const price = RANKS[nextRank].price;
-        const newMoney = me.money - price;
-        const updates = {};
-        updates[`rooms/${roomCode}/players/${myId}/money`] = newMoney;
-        updates[`rooms/${roomCode}/players/${myId}/rank`] = nextRank;
-
-        addLog(updates, `${me.name} paid ${fmt(price)} to reach ${RANKS[nextRank].emoji} ${RANKS[nextRank].name.replace('\n', ' ')}!`, true);
-
-        // Win condition
-        if (nextRank === RANKS.length - 1) {
-            updates[`rooms/${roomCode}/status`] = 'won';
-            updates[`rooms/${roomCode}/winner`] = myId;
-            addLog(updates, `🏆 ${me.name} has become a BILLIONAIRE! GAME OVER!`, true);
-        }
-
-        await update(ref(db), updates);
+        // Implement rank up logic
         closeRankUpModal();
     };
 
-    // ── WINNER ───────────────────────────────────────────────────────
-    function renderWinner(state) {
-        document.getElementById('game').style.display = 'none';
-        document.getElementById('winner').style.display = 'flex';
-        const winner = state.players[state.winner];
-        document.getElementById('winnerName').textContent = winner?.name || 'Someone';
-        spawnConfetti();
-    }
-
-    function spawnConfetti() {
-        const container = document.getElementById('confetti');
-        container.innerHTML = '';
-        const colors = ['#C9A84C', '#E8C96A', '#fff', '#4CAF50', '#5588ee'];
-        for (let i = 0; i < 80; i++) {
-            const el = document.createElement('div');
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            el.style.cssText = `
-      position:absolute;
-      left:${Math.random() * 100}%;
-      top:-20px;
-      width:${6 + Math.random() * 8}px;
-      height:${6 + Math.random() * 8}px;
-      background:${color};
-      border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
-      animation:fall ${2 + Math.random() * 3}s linear ${Math.random() * 2}s infinite;
-      opacity:${0.6 + Math.random() * 0.4};
-    `;
-            container.appendChild(el);
-        }
-        const style = document.createElement('style');
-        style.textContent = `@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}`;
-        container.appendChild(style);
-    }
-
-    window.resetGame = async function () {
-        if (!localState || localState.host !== myId) {
-            alert('Only the host can reset!');
-            return;
-        }
-        // Re-init all players
-        const players = {};
-        Object.keys(localState.players).forEach(pid => {
-            players[pid] = { ...localState.players[pid], money: 1000, rank: 0, jailed: false };
-        });
-        await set(roomRef, {
-            host: localState.host,
-            status: 'playing',
-            turn: 0,
-            phase: 'idle',
-            playerOrder: localState.playerOrder,
-            players,
-            log: []
-        });
-        document.getElementById('winner').style.display = 'none';
+    window.resetGame = function () {
+        window.location.reload();
     };
 
-    // ── LOG HELPER ───────────────────────────────────────────────────
-    function addLog(updates, text, highlight = false) {
-        const key = `rooms/${roomCode}/log/${Date.now()}_${Math.random().toString(36).slice(2, 5)}`;
-        updates[key] = { text, highlight };
-    }
-
-    // ── COPY INSTRUCTIONS ────────────────────────────────────────────
     window.copyInstructions = function () {
-        const text = `Wealth & Rank — Firebase Setup:
-1. Go to https://console.firebase.google.com
-2. Create a new project (free Spark plan)
-3. Add a Web app to the project
-4. Enable Realtime Database → Start in test mode
-5. Go to Project Settings → Your apps → Config
-6. Open wealth-and-rank.html in a text editor
-7. Find the FIREBASE_CONFIG block and replace with your config
-8. Host the file anywhere (GitHub Pages, Netlify, etc.)`;
-        navigator.clipboard.writeText(text).then(() => alert('Instructions copied!'));
+        alert('Visit Firebase Console and copy your web app config');
     };
 
-    <script type="module">
-  // Import the functions you need from the SDKs you need
-        import {initializeApp} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import {getAnalytics} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-analytics.js";
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
-
-        // Your web app's Firebase configuration
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-        const firebaseConfig = {
-            apiKey: "AIzaSyD_dgGc79a0rIhcFQEjYbNq2mUYFHSC7Z8",
-        authDomain: "onlinekern-8d334.firebaseapp.com",
-        projectId: "onlinekern-8d334",
-        storageBucket: "onlinekern-8d334.firebasestorage.app",
-        messagingSenderId: "427890270027",
-        appId: "1:427890270027:web:b154228cbcc17e937052ce",
-        measurementId: "G-WM8HD37SR0"
-  };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
+    function addLog(message) {
+        if (!localState) return;
+        const log = localState.log || [];
+        log.push({ message, highlight: false });
+        localState.log = log;
+        renderLog(localState);
+    }
 </script>
-</script>
+
 </body>
 </html>
